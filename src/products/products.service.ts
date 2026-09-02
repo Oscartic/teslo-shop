@@ -2,8 +2,10 @@ import { Injectable, InternalServerErrorException, BadRequestException, Logger, 
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { ILike, Repository } from 'typeorm';
 import { Product } from './entities/product.entity';
+import { PaginationDto } from '../common/dtos/pagination.dto';
+import { validate as isUUID } from 'uuid';
 
 
 @Injectable()
@@ -29,37 +31,71 @@ export class ProductsService {
 
   }
 
-  findAll() {
+  findAll(paginationDto: PaginationDto) {
     try {
-      return this.productRepository.find();
+      const { limit = 10, offset = 0 } = paginationDto;
+      return this.productRepository.find({
+        take: limit,
+        skip: offset,
+        // TODO relations 
+      });
     } catch (error) {
       this.handleDBExceptions(error);
     }
   }
 
-  async findOne(id: string) {
-    const product = await this.productRepository.findOneBy({ id });
+  async findOne(search: string) {
+
+    let product: Product | null = null;
+
+    if( isUUID(search) ) {
+      product = await this.productRepository.findOneBy({ id: search });
+    } else {
+      // product = await this.productRepository.findOneBy({ slug: search });
+      const queryBuilder = this.productRepository.createQueryBuilder();
+      product = await queryBuilder
+        .where('slug = :slug OR title ILIKE :title', { 
+          slug: search,
+          title: (`%${search}%`),
+        })
+        .getOne();
+    }
 
     if(!product) {
-      throw new NotFoundException(`Product with id ${id} not found`);
+      throw new NotFoundException(`Product with id ${search} not found`);
     }
     return product;
   }
 
-  update(id: string, updateProductDto: UpdateProductDto) {
-    return `This action updates a #${id} product`;
+  async update(id: string, updateProductDto: UpdateProductDto) {
+    
+    const product = await this.productRepository.preload({
+      id,
+      ...updateProductDto
+    });
+
+    if(!product) {
+      throw new NotFoundException(`Product with id ${id} not found`);
+    }
+    try {
+      await this.productRepository.save(product);
+      return product;
+    } catch (error) {
+      this.handleDBExceptions(error);
+    }
   }
 
   async remove(id: string) {
     const product = await this.findOne(id);
     await this.productRepository.remove(product);
   }
-
+// ******* PRIVATE METHODS ******* //
   private handleDBExceptions(error: any) {
     if(error.code === '23505') {
-      throw new BadRequestException(`Error creating product. ${error.detail}`);
+      this.logger.warn(JSON.stringify(`${error.parameters} ${error.detail}`));
+      throw new BadRequestException(error.detail);
     }
-    this.logger.error(error);
-    throw new InternalServerErrorException('Unexpected error.');
+    this.logger.error(error.detail);
+    throw new InternalServerErrorException('Unexpected error. Please check server logs');
   }
 }

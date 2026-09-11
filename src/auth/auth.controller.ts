@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Body, UseGuards, Req, SetMetadata } from '@nestjs/common';
 import { UserRoleGuard } from './guards/user-role.guard';
 import { AuthGuard } from '@nestjs/passport';
+import { ApiProperty, ApiTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { CreateUserDto, LoginUserDto } from './dto';
 import { GetUser } from './decorators/get-user.decorator';
@@ -8,15 +9,24 @@ import { User } from './entities/user.entity';
 import { Auth, RoleProtected } from './decorators';
 import { ValidRoles } from './interfaces';
 
+@ApiTags('Auth')  
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('register')
+  @ApiProperty({
+      description: 'Create a new user',
+      nullable: false
+  })
   createUser(@Body() createUserDto: CreateUserDto) {
     return this.authService.create(createUserDto);
   }
 
+  @ApiProperty({
+      description: 'Login a user',
+      nullable: false
+  })
   @Post('login')
   loginUser(@Body() loginUserDto: LoginUserDto) {
     return this.authService.login(loginUserDto);

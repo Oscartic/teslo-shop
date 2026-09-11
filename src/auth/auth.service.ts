@@ -52,16 +52,27 @@ export class AuthService {
     };
   }
 
+  async checkAuthStatus(user: User) {
+      return {
+        fullName: user.fullName,
+        email: user.email,
+        role: user.role,
+        isActive: user.isActive,
+        token: this.generateJwt({ id: user.id })
+    };  
+  }
+
+
+  private generateJwt(payload: JwtPayload): string {
+    const token = this.jwtService.sign(payload);
+    return token;
+  }
+
   private handleError(error: any) : never {
     if (error.code === '23505') { // Unique violation
         throw new BadRequestException(error.detail);
     }
     console.error(error);
     throw new InternalServerErrorException('Unexpected error occurred');
-  }
-
-  private generateJwt(payload: JwtPayload): string {
-    const token = this.jwtService.sign(payload);
-    return token;
   }
 }

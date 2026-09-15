@@ -33,25 +33,23 @@ export class SeedService {
   private async insertUsers() {
     const users = initialData.users;
 
-    const insertPromises = users.map(async user => {
+    let adminUser: User;
+    for (const user of users) {
       user.password = await bcrypt.hash(user.password, 10);
-      return this.userRepository.save(user);
-    });
-    const [adminUser] = await Promise.all(insertPromises);
-    console.log(adminUser);
-    return adminUser;
+      adminUser = await this.userRepository.save(user);
+    }
+    return adminUser!;
   }
-  
+
   private async insertNewProducts(user: User) {
     await this.productsService.deleteAllProducts();
 
     const products = initialData.products;
 
-    const insertPromises = products.map(product => 
-      this.productsService.create(product, user)
-    );
-    await Promise.all(insertPromises);
-    
+    for (const product of products) {
+      await this.productsService.create(product, user);
+    }
+
     return true;
   }
 }

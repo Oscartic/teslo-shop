@@ -18,3 +18,7 @@ docker-compose up -d
 
 7. Run with: 
 ```npm run start:dev```
+
+
+```URL API PROD: https://teslo-shop-256l.onrender.com```
+```URL FRONT PROD: https://elaborate-entremet-30fd78.netlify.app```
